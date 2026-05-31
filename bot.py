@@ -12,8 +12,8 @@ ADMIN_ID = 6271558160
 TELEBIRR_NUMBER = "0924720606"
 
 # ---- LINKII DATABASE NEON KEE ----
-# HUBADHU: Bakka "STTI_PASSWORD_KEE_GALCHI" jedhutti password kee isa dhugaa galchi!
-DATABASE_URL = "postgresql://neondb_owner:STTI_PASSWORD_KEE_GALCHI@ep-divine-morning-ap5ugbss-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+# Paaswordiin kee sirriitti keessa galeera!
+DATABASE_URL = "postgresql://neondb_owner:npg_3QVYKmcTG9Rn@ep-divine-morning-ap5ugbss-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 # ---- RENDER PORT SERVER ----
 class HealthCheckHandler(BaseHTTPRequestHandler):
