@@ -10,7 +10,6 @@ ADMIN_ID = 6271558160
 TELEBIRR_NUMBER = "0924720606"
 
 # ---- DATABASE QOPHEESSUU ----
-# Kuni herrega (Balance) maamiltootaa ni kuusa
 def init_db():
     conn = sqlite3.connect("bot_database.db")
     cursor = conn.cursor()
@@ -52,10 +51,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.message.from_user
     balance = get_balance(user.id)
     
+    # Button-oota dizaayinii halluu ati barbaaddeen (Emojii Magariisa, Cuquliisa, fi Diimaan xaxamee)
     keyboard = [
-        [InlineKeyboardButton("💰 Deposit (Galchuuf)", callback_data="deposit"), InlineKeyboardButton("💸 Withdraw (Baasuuf)", callback_data="withdraw")],
-        [InlineKeyboardButton("🎮 Tapha Jalqabi (Play Game)", callback_data="play_menu")],
-        [InlineKeyboardButton("💳 Balance (Herrega Kee)", callback_data="check_balance")]
+        [
+            InlineKeyboardButton("🟢 DEPOSIT (Galchuuf) 🟢", callback_data="deposit"),
+            InlineKeyboardButton("🔴 WITHDRAW (Baasuuf) 🟢", callback_data="withdraw")
+        ],
+        [
+            InlineKeyboardButton("🎮 Tapha Jalqabi (Play Game) 🎲", callback_data="play_menu")
+        ],
+        [
+            InlineKeyboardButton("🔵 CUSTOMER SERVICE 🟢", callback_data="customer_service"),
+            InlineKeyboardButton("💳 Balance (Herrega Kee)", callback_data="check_balance")
+        ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -70,14 +78,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
     await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode="Markdown")
 
-# Inline Buttons
+# Inline Buttons Actions
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
     user = query.from_user
     balance = get_balance(user.id)
     
-    if query.data == "check_balance":
+    if query.data == "customer_service":
+        await query.edit_message_text(
+            "🔵 **CUSTOMER SERVICE / የደንበኞች አገልግሎት** 🟢\n\n"
+            "Afaan Oromoo: Rakkina ykn gaaffii qabdan gadi kanaan Admin keenya qunnamaa: @solee_Wes\n\n"
+            "አማርኛ: ማንኛውም አይነት ችግር ወይም ጥያቄ ካለዎት ባለቤቱን ያግኙ: @solee_Wes",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Gara Fuladuraatti", callback_data="back_main")]])
+        )
+
+    elif query.data == "check_balance":
         await query.edit_message_text(
             f"💳 **Herrega Kee / ሂሳብዎ:**\n\n"
             f"Afaan Oromoo: Balance keessan yeroo ammaa `{balance} Birr` dha.\n"
@@ -87,15 +103,16 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
     elif query.data == "deposit":
         await query.edit_message_text(
-            f"⏩ **Kaffaltii Raawwachuuf / ክፍያ ለመፈጸም:**\n\n"
-            f"1. Telebirr: `{TELEBIRR_NUMBER}` irratti kaffalaa.\n"
+            f"🟢 **DEPOSIT (Qarshii Galchuuf) 🟢**\n\n"
+            f"1. Lakkoofsa **Telebirr** keenya: `{TELEBIRR_NUMBER}` irratti kaffalaa.\n"
             f"2. Fakkii (Screenshot) kaffaltii bot kanaaf ergaa.\n\n"
-            f"Hamma barbaaddan deposit gochuu ni dandeessu!"
+            f"Hamma barbaaddan deposit gochuu ni dandeessu! / የፈለጉትን ያህል ማስገባት ይችላሉ!"
         )
         
     elif query.data == "withdraw":
         if balance < 100:
             await query.edit_message_text(
+                f"🔴 **WITHDRAW (Qarshii Baasuuf) 🟢**\n\n"
                 f"❌ **Dhiifama / ይቅርታ!**\n\n"
                 f"Afaan Oromoo: Qarshii baasuuf xiqqaan **100 Birr** ta'uu qaba. Balance keessan `{balance} Birr` qofa.\n"
                 f"አማርኛ: ማውጣት የሚቻለው አነስተኛው መጠን **100 Birr** ነው። የእርስዎ ሂሳብ `{balance} Birr` ነው።",
@@ -103,8 +120,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             )
         else:
             await query.edit_message_text(
-                f"⏩ **Qarshii Baasuuf / ብር ለማውጣት:**\n\n"
-                f"Maqaa Bankii, Lakkoofsa fi Hamma qarshii baastan (Minimum 100) nuuf barreessaa.\n"
+                f"🔴 **WITHDRAW (Qarshii Baasuuf) 🟢**\n\n"
+                f"⏩ Maqaa Bankii, Lakkoofsa fi Hamma qarshii baastan (Minimum 100) nuuf barreessaa.\n"
                 f"ምሳሌ: `Telebirr, 09xxxxxxxx, 150 Birr`"
             )
             
@@ -123,17 +140,13 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             await query.edit_message_text(
                 f"❌ **Qarshii Gahaa Hin Qabdu / በቂ ሂሳብ የለዎትም!**\n\n"
                 f"Tapha kanaaf {cost} Birr si barbaachisa. Balance kee `{balance} Birr` dha. Maaloo dura Deposit godhi.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💰 Deposit", callback_data="deposit")]])
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🟢 Deposit", callback_data="deposit")]])
             )
             return
             
-        # Tapha eegaluu (Balance hir'isuu)
         update_balance(user.id, user.username, -cost)
-        
-        # Carraa lakkoofsa 1-7 gidduu sadii naquu
         nums = [random.randint(1, 7) for _ in range(3)]
         
-        # Badhaasa shallaguu seera keetiin
         if cost == 5:
             win_amount = random.randint(5, 25)
         elif cost == 15:
@@ -141,7 +154,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         else:
             win_amount = random.randint(25, 150)
             
-        # Balance irratti mo'annoo dabaluu
         update_balance(user.id, user.username, win_amount)
         new_bal = get_balance(user.id)
         
@@ -156,17 +168,24 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
     elif query.data == "back_main":
         keyboard = [
-            [InlineKeyboardButton("💰 Deposit (Galchuuf)", callback_data="deposit"), InlineKeyboardButton("💸 Withdraw (Baasuuf)", callback_data="withdraw")],
-            [InlineKeyboardButton("🎮 Tapha Jalqabi (Play Game)", callback_data="play_menu")],
-            [InlineKeyboardButton("💳 Balance (Herrega Kee)", callback_data="check_balance")]
+            [
+                InlineKeyboardButton("🟢 DEPOSIT (Galchuuf) 🟢", callback_data="deposit"),
+                InlineKeyboardButton("🔴 WITHDRAW (Baasuuf) 🟢", callback_data="withdraw")
+            ],
+            [
+                InlineKeyboardButton("🎮 Tapha Jalqabi (Play Game) 🎲", callback_data="play_menu")
+            ],
+            [
+                InlineKeyboardButton("🔵 CUSTOMER SERVICE 🟢", callback_data="customer_service"),
+                InlineKeyboardButton("💳 Balance (Herrega Kee)", callback_data="check_balance")
+            ]
         ]
-        await query.edit_message_text(f"🔴⚪⚫ Gara fuula duraatti deebitaniittu. Balance: {balance} Birr", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text(f"🔴⚪⚫ Gara fuula duraatti deebitaniittu.\nBalance: {balance} Birr", reply_markup=InlineKeyboardMarkup(keyboard))
 
-# Deposit Receipt (Fakkii gara Adminitti dabarsuu)
+# Deposit Receipt 
 async def handle_deposit_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.message.from_user
     photo_file = update.message.photo[-1].file_id
-    
     keyboard = [[InlineKeyboardButton("✅ Mirkaneessi (Approve)", callback_data=f"app_dep_{user.id}")], [InlineKeyboardButton("❌ Diduuf (Reject)", callback_data=f"rej_dep_{user.id}")]]
     
     await context.bot.send_photo(
@@ -176,7 +195,7 @@ async def handle_deposit_receipt(update: Update, context: ContextTypes.DEFAULT_T
     )
     await update.message.reply_text("🚀 Ragaan keessan Admin-itti ergameera. To'atamee hamma mirkanaa'utti gadi nu eegaa!")
 
-# Withdraw Request (Barreeffama gara Adminitti dabarsuu)
+# Withdraw Request
 async def handle_text_requests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.message.from_user
     text = update.message.text
@@ -199,19 +218,16 @@ async def admin_verification(update: Update, context: ContextTypes.DEFAULT_TYPE)
     action, req_type, user_id = data.split("_")
     user_id = int(user_id)
     
-    # Koodii kanaan Admin yoo Approve godhe, balance maamilaa irratti 100 daballa (Fakkeenyaaf, kaffaltii ati manual-iin argite irratti hundaa'ee siif dabala)
     if action == "app":
         if req_type == "dep":
-            # Fakkeenyaaf qarshii inni galche hamma barbaade ta'uu waan danda'uuf koodiin kun yeroo ati approve gootu herrega isaa irratti 100 ni daddabala (Ati koodii keessatti herrega sirrii jijjiiruu dandeessa ykn koodiin ofumaan 100 gadi lakkisa).
-            update_balance(user_id, "", 100) # Asirratti hamma qarshii manual-iin qabdu dabalata
-            msg_to_user = "✅ Kaffaltiin keessan mirkanaa'ee balance keessan irratti dabalameera! / የክፍያ ጥያቄዎ ጸድቆ ሂሳብዎ ላይ ተጨምሯል!"
+            update_balance(user_id, "", 100) 
+            msg_to_user = "✅ Kaffaltiin keessan mirkanaa'eera! Balance keessan irratti dabalameera!"
         else:
-            # Withdraw yoo ta'e herrega isaa irraa hir'isuun duraan waan sirraa eeguuf, erga kaffaltee booda herrega isaa guutumaan guutuutti hir'isuu dandeessa.
             update_balance(user_id, "", -100)
-            msg_to_user = "✅ Gaaffiin qarshii baasuu keessan fudhatama argatee isiniif ergameera! / የብር ማውጣት ጥያቄዎ ተቀባይነት አግኝቶ ተልኮልዎታል።"
+            msg_to_user = "✅ Gaaffiin qarshii baasuu keessan fudhatama argatee isiniif ergameera!"
         msg_to_admin = f"🟢 User ID {user_id} Mirkaneessitee jirta."
     else:
-        msg_to_user = "❌ Dhiifama, gaaffiin keessan fudhatama hin arganne. / ይቅርታ፣ ጥያቄዎ ተቀባይነት አላገኘም።"
+        msg_to_user = "❌ Dhiifama, gaaffiin keessan fudhatama hin arganne."
         msg_to_admin = f"🔴 User ID {user_id} Diddee jirta."
         
     try:
@@ -223,7 +239,7 @@ async def admin_verification(update: Update, context: ContextTypes.DEFAULT_TYPE)
 def main():
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_click, pattern="^(deposit|withdraw|play_menu|check_balance|back_main|game_.*)$"))
+    application.add_handler(CallbackQueryHandler(button_click, pattern="^(deposit|withdraw|play_menu|check_balance|back_main|customer_service|game_.*)$"))
     application.add_handler(CallbackQueryHandler(admin_verification, pattern="^(app|rej)_"))
     application.add_handler(MessageHandler(filters.PHOTO, handle_deposit_receipt))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_requests))
