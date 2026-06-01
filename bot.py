@@ -1,312 +1,111 @@
-import os
+import asyncio
 import random
-import psycopg2
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import threading
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+from aiogram import Bot, Dispatcher, Router, F
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.filters import Command
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.context import FSMContext
 
-# Token, Admin ID fi Telebirr kee
-TOKEN = "8200095818:AAHGl2VtiKQbt3dA6Vg5UOVB4H0g7QyVUOI"
-ADMIN_ID = 6271558160
-TELEBIRR_NUMBER = "0924720606"
+# 1. TOKEN kee asitti galchi
+API_TOKEN = "YOUR_BOT_TOKEN_HERE"
 
-# DATABASE NEON
-DATABASE_URL = "postgresql://neondb_owner:npg_3QVYKmcTG9Rn@ep-divine-morning-ap5ugbss-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher()
+router = Router()
 
-# ---- SERVER FOR RENDER ----
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/plain")
-        self.end_headers()
-        self.wfile.write(b"Bot is running successfully!")
+class WithdrawalForm(StatesGroup):
+    phone = State()
+    name = State()
+    amount = State()
 
-def run_health_server():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
-    server.serve_forever()
+# --- Logic Tapha ---
+def calculate_game_result(stake):
+    lucky_numbers = [2, 5, 7]
+    user_choice = random.randint(1, 7)
+    if user_choice in lucky_numbers:
+        if stake == 5: prize = random.randint(5, 25)
+        elif stake == 15: prize = random.randint(15, 100)
+        elif stake == 25: prize = random.randint(25, 150)
+        else: prize = 0
+        return True, user_choice, prize
+    return False, user_choice, 0
 
-# ---- DATABASE QUQQUNNAMTII ----
-def get_db_connection():
-    return psycopg2.connect(DATABASE_URL)
-
-def init_db():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            user_id BIGINT PRIMARY KEY,
-            username TEXT,
-            balance REAL DEFAULT 0.0
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-def get_balance(user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
-    row = cursor.fetchone()
-    conn.close()
-    if row:
-        return row[0]
-    return 0.0
-
-def update_balance(user_id, username, amount):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO users (user_id, username, balance) 
-        VALUES (%s, %s, 0.0)
-        ON CONFLICT (user_id) DO NOTHING
-    """, (user_id, username))
-    
-    cursor.execute("UPDATE users SET balance = balance + %s WHERE user_id = %s", (amount, user_id))
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# ---- BUTTON MAIN MENU ----
-def get_main_keyboard():
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("🟢 DEPOSIT (Galchuuf) 🟢", callback_data="deposit"),
-            InlineKeyboardButton("🔴 WITHDRAW (Baasuuf) 🟢", callback_data="withdraw")
-        ],
-        [InlineKeyboardButton("🎮 Tapha Jalqabi (Play Game) 🎲", callback_data="play_menu")],
-        [
-            InlineKeyboardButton("🔵 CUSTOMER SERVICE 🟢", callback_data="customer_service"),
-            InlineKeyboardButton("💳 Balance (Herrega Kee)", callback_data="check_balance")
-        ]
+# --- Keyboards ---
+def get_main_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📥 Deposit / ማስገቢያ", callback_data="deposit_menu")],
+        [InlineKeyboardButton(text="📤 Withdrawal / ማውጫ", callback_data="wd_phone")],
+        [InlineKeyboardButton(text="🎮 Game Table / የጨዋታ ጠረጴዛ", callback_data="game_table")],
+        [InlineKeyboardButton(text="🎧 Support / የደንበኞች አገልግሎት", callback_data="customer_service")]
     ])
 
-# ---- BOT ACTIONS ----
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user = update.message.from_user
-    balance = get_balance(user.id)
-    
-    welcome_text = (
-        "🔴🔴🔴🔴🔴🔴🔴🔴\n"
-        "⚪⚪⚪🌳⚪⚪⚪\n"
-        "⚫⚫⚫⚫⚫⚫⚫⚫\n\n"
-        "**[Afaan Oromoo]**\n"
-        f"Baga Nagaan Dhuftan! Gara Bot tapha carraa keenyaatti.\n💰 **Balance keessan:** {balance} Birr\n\n"
-        "**[አማርኛ]**\n"
-        f"እንኳን በደህና መጡ! ወደ ጨዋታ ቦታችን።\n💰 **የአሁኑ ሂሳብዎ:** {balance} Birr"
-    )
-    await update.message.reply_text(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
+def get_deposit_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔴 50", callback_data="dep_50"), InlineKeyboardButton(text="🟢 75", callback_data="dep_75")],
+        [InlineKeyboardButton(text="🔴 100", callback_data="dep_100"), InlineKeyboardButton(text="🟢 150", callback_data="dep_150")],
+        [InlineKeyboardButton(text="🔴 175", callback_data="dep_175"), InlineKeyboardButton(text="🟢 200", callback_data="dep_200")],
+        [InlineKeyboardButton(text="🔴 250", callback_data="dep_250"), InlineKeyboardButton(text="🟢 500", callback_data="dep_500")],
+        [InlineKeyboardButton(text="⬅️ Main Menu / ዋና ምናሌ", callback_data="main_menu")]
+    ])
 
-async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    await query.answer()
-    user = query.from_user
-    balance = get_balance(user.id)
-    
-    if query.data == "customer_service":
-        await query.edit_message_text(
-            "🔵 **CUSTOMER SERVICE / የደንበኞች አገልግሎት** 🟢\n\n"
-            "Afaan Oromoo: Rakkina ykn gaaffii qabdan gadi kanaan Admin keenya qunnamaa: @solee_Wes\n\n"
-            "አማርኛ: ማንኛውም አይነት ችግር ወይም ጥያቄ ካለዎት ባለቤቱን ያግኙ: @solee_Wes",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Gara Main Menu", callback_data="back_main")]])
-        )
-    elif query.data == "check_balance":
-        await query.edit_message_text(
-            f"💳 **Herrega Kee / ሂሳብዎ:**\n\nHerrega keessan yeroo ammaa `{balance} Birr` dha.",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Gara Main Menu", callback_data="back_main")]])
-        )
-    elif query.data == "deposit":
-        await query.edit_message_text(
-            f"🟢 **DEPOSIT (Qarshii Galchuuf) 🟢**\n\n"
-            f"1. Lakkoofsa **Telebirr** keenya: `{TELEBIRR_NUMBER}` irratti kaffalaa.\n"
-            f"2. Fakkii (Screenshot) kaffaltii ergaa.\n"
-            f"💡 **Hubachiisa:** Screenshot yeroo ergitan gadi irratti hamma qarshii galchitan (Fkn: 150) jedhaatii barreessaa!",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Duubatti", callback_data="back_main")]])
-        )
-    elif query.data == "withdraw":
-        if balance < 100:
-            await query.edit_message_text(
-                f"🔴 **WITHDRAW (Qarshii Baasuuf) 🟢**\n\n❌ Qarshii baasuuf xiqqaan **100 Birr** ta'uu qaba. Balance keessan `{balance} Birr` qofa.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Duubatti", callback_data="back_main")]])
-            )
-        else:
-            await query.edit_message_text(
-                f"🔴 **WITHDRAW (Qarshii Baasuuf) 🟢**\n\n⏩ Maqaa Bankii, Lakkoofsa fi Hamma qarshii baastan nuuf barreessaa."
-            )
-    elif query.data == "play_menu":
-        keyboard = [
-            [InlineKeyboardButton("🎲 Tapha 5 Birr (Argannoo: 5-25)", callback_data="game_5")],
-            [InlineKeyboardButton("🎲 Tapha 15 Birr (Argannoo: 15-75)", callback_data="game_15")],
-            [InlineKeyboardButton("🎲 Tapha 25 Birr (Argannoo: 25-150)", callback_data="game_25")],
-            [InlineKeyboardButton("🔙 Gara Main Menu", callback_data="back_main")]
-        ]
-        await query.edit_message_text("🎮 **Taphawwan Carraa Filadhu:**", reply_markup=InlineKeyboardMarkup(keyboard))
-    
-    elif query.data.startswith("game_"):
-        cost = int(query.data.split("_")[1])
-        if balance < cost:
-            await query.edit_message_text(
-                f"❌ Tapha kanaaf {cost} Birr si barbaachisa. Balance kee `{balance} Birr` dha. Maaloo dura Deposit godhi.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🟢 Deposit", callback_data="deposit")]])
-            )
-            return
-        
-        # Gabatee haaraa bifa kanaan
-        table_text = (
-            f"🎮 **TOUCH & WIN (Abbaa {cost} Birr)**\n\n"
-            "📋 **GABATEE BADHAASAA / የሽልማት ሰንጠረዥ:**\n"
-            "```\n"
-            "| Gosa Taphaa | Lakkoofsa | Badhaasa Argamu  |\n"
-            "|-------------|-----------|------------------|\n"
-            "| Tapha 5     |   1 - 7   |   5 - 25 Birr    |\n"
-            "| Tapha 15    |   1 - 7   |  15 - 75 Birr    |\n"
-            "| Tapha 25    |   1 - 7   |  25 - 150 Birr   |\n"
-            "
-```\n"
-            "👉 Lakkoofsota **1 hanga 7** jiran keessaa lakkoofsa tokko tuquun badhaasa kee battalatti argadhu!\n\n"
-            "🟢 **Lakkoofsa kee filadhu:**"
-        )
-        
-        keyboard = []
-        row = []
-        for i in range(1, 8):
-            row.append(InlineKeyboardButton(f"🔢 {i}", callback_data=f"play_{cost}_{i}"))
-            if i % 3 == 0 or i == 7:
-                keyboard.append(row)
-                row = []
-        keyboard.append([InlineKeyboardButton("🔙 Menu", callback_data="back_main")])
-        
-        await query.edit_message_text(table_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
-        
-    elif query.data.startswith("play_"):
-        parts = query.data.split("_")
-        cost = int(parts[1])
-        user_choice = int(parts[2])
-        
-        # Tikkeettii kaffalchiisuu
-        update_balance(user.id, user.username, -cost)
-        
-        # Lakkoofsa inni tuqe irratti badhaasni battalatti ni shallagama (Randomly)
-        if cost == 5:
-            win_amount = random.randint(5, 25)
-        elif cost == 15:
-            win_amount = random.randint(15, 75)
-        else:
-            win_amount = random.randint(25, 150)
-            
-        # Badhaasa herregatti dabaluu
-        update_balance(user.id, user.username, win_amount)
-        new_bal = get_balance(user.id)
-        
-        final_text = (
-            f"🎮 **BU'AA TAPHA TOUCH & WIN** 🎮\n\n"
-            f"👉 Lakkoofsa Ati Tuqte: **🔢 {user_choice}**\n"
-            f"🎁 🎉 **BAGA GAMMADDE!** 🎉 🎁\n\n"
-            f"Lakkoofsa ati tuqte irratti badhaasni argame:\n"
-            f"💰 **+{win_amount} Birr**\n\n"
-            f"💳 Herrega keessan yeroo ammaa: `{new_bal} Birr`"
-        )
-        
-        keyboard = [
-            [InlineKeyboardButton("🔄 Ammas Taphadhu", callback_data=f"game_{cost}")],
-            [InlineKeyboardButton("🔙 Gara Main Menu", callback_data="back_main")]
-        ]
-        await query.edit_message_text(final_text, reply_markup=InlineKeyboardMarkup(keyboard))
-            
-    elif query.data == "back_main":
-        await query.edit_message_text(f"🔴⚪⚫ Balance keessan: {balance} Birr\nFilannoo keessan gadii kanaan qoradhaa:", reply_markup=get_main_keyboard())
+def get_game_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="5 ETB", callback_data="play_5"), InlineKeyboardButton(text="15 ETB", callback_data="play_15"), InlineKeyboardButton(text="25 ETB", callback_data="play_25")],
+        [InlineKeyboardButton(text="⬅️ Main Menu / ዋና ምናሌ", callback_data="main_menu")]
+    ])
 
-# ---- HANDLE DEPOSIT RECEIPT FROM USER ----
-async def handle_deposit_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user = update.message.from_user
-    photo_file = update.message.photo[-1].file_id
-    caption_text = update.message.caption if update.message.caption else "Hamma qarshii hin barreeffamne"
-    
-    amount_detected = "".join([s for s in caption_text if s.isdigit()])
-    final_amount = amount_detected if amount_detected else "Mirkaneessi"
+# --- Handlers ---
+@router.message(Command("start"))
+async def start(message: Message):
+    await message.answer("Baga nagaan dhuftan! / እንኳን ደህና መጡ!", reply_markup=get_main_kb())
 
-    keyboard = [
-        [InlineKeyboardButton(f"✅ Mirkaneessi (+{final_amount} Birr)", callback_data=f"adm_dep_{final_amount}_{user.id}")],
-        [InlineKeyboardButton("✅ 50 Birr", callback_data=f"adm_dep_50_{user.id}"), InlineKeyboardButton("✅ 100 Birr", callback_data=f"adm_dep_100_{user.id}")],
-        [InlineKeyboardButton("✅ 200 Birr", callback_data=f"adm_dep_200_{user.id}"), InlineKeyboardButton("✅ 500 Birr", callback_data=f"adm_dep_500_{user.id}")],
-        [InlineKeyboardButton("❌ Diduuf (Reject)", callback_data=f"adm_rej_0_{user.id}")]
-    ]
-    
-    await context.bot.send_photo(
-        chat_id=ADMIN_ID, 
-        photo=photo_file, 
-        caption=f"📩 **Gaaffii Deposit Haaraa**\n👤 Maamila: {user.first_name} (@{user.username})\n📝 Barreeffama isaan dhiisan: {caption_text}", 
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-    await update.message.reply_text("🚀 Ragaan keessan Admin-itti ergameera! Admin hanga mirkaneessutti maaloo obsaan eegaa.")
+@router.callback_query(F.data == "main_menu")
+async def main_menu(callback: CallbackQuery):
+    await callback.message.edit_text("Main Menu / ዋና ምናሌ:", reply_markup=get_main_kb())
 
-async def handle_text_requests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user = update.message.from_user
-    text = update.message.text
-    if user.id == ADMIN_ID: return
-    keyboard = [
-        [InlineKeyboardButton("✅ Baasii Mirkaneessi", callback_data=f"adm_wit_100_{user.id}")], 
-        [InlineKeyboardButton("❌ Baasii Didu", callback_data=f"adm_rej_0_{user.id}")]
-    ]
-    await context.bot.send_message(chat_id=ADMIN_ID, text=f"📩 Withdraw Gaaffii:\n👤 Maamila: {user.first_name}\n📝 Odeeffannoo: {text}", reply_markup=InlineKeyboardMarkup(keyboard))
-    await update.message.reply_text("🚀 Gaaffiin keessan Admin-itti ergameera.")
+@router.callback_query(F.data == "game_table")
+async def game_table(callback: CallbackQuery):
+    await callback.message.edit_text("🎮 Tapha filadhaa / ጨዋታ ይምረጡ:", reply_markup=get_game_kb())
 
-# ---- ADMIN VERIFICATION PROCESS ----
-async def admin_verification(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    await query.answer()
-    
-    parts = query.data.split("_")
-    if len(parts) < 4 or parts[0] != "adm" : return
-    
-    _, req_type, amount_str, user_id = parts
-    user_id = int(user_id)
-    
-    try:
-        amount = float(amount_str)
-    except ValueError:
-        amount = 0.0
-    
-    if req_type == "dep":
-        if amount <= 0:
-            await query.edit_message_text(text="❌ Dogoggora: Hamma qarshii kaffaltii sirriitti hin argine. Maaloo button lakkoofsa qabu tuqi.")
-            return
-        update_balance(user_id, "", amount)
-        new_bal = get_balance(user_id)
-        msg_to_user = f"✅ **Kaffaltiin keessan {amount} Birr mirkanaa'eera!**\n Herrega keessan irratti dabalameera.\n💰 Balance ammaa: {new_bal} Birr"
-        msg_to_admin = f"🟢 User ID {user_id} kaffaltii {amount} Birr mirkaneessitee jirta."
-        
-        try:
-            await context.bot.send_message(chat_id=user_id, text=msg_to_user, reply_markup=get_main_keyboard())
-        except Exception: pass
-        
-    elif req_type == "wit":
-        msg_to_user = "✅ Gaaffiin qarshii baasuu keessan mirkanaa'eera!"
-        msg_to_admin = f"🟢 User ID {user_id} Baasii isaa Mirkaneessitee jirta."
-        try:
-            await context.bot.send_message(chat_id=user_id, text=msg_to_user, reply_markup=get_main_keyboard())
-        except Exception: pass
-    else:
-        msg_to_user = "❌ Dhiifama, gaaffiin deposit keessan fudhatama hin arganne. Ragaa kaffaltii keessan deebisaa mirkaneeffadha."
-        msg_to_admin = f"🔴 User ID {user_id} Diddee jirta."
-        try:
-            await context.bot.send_message(chat_id=user_id, text=msg_to_user, reply_markup=get_main_keyboard())
-        except Exception: pass
-        
-    await query.edit_message_text(text=msg_to_admin)
+@router.callback_query(F.data.startswith("play_"))
+async def play_game(callback: CallbackQuery):
+    stake = int(callback.data.split("_")[1])
+    won, number, prize = calculate_game_result(stake)
+    msg = f"Lakkoofsa: {number}\n" + ("🎉 Injifatteetta! / አሸንፈዋል! " + str(prize) + " ETB" if won else "❌ Hin injifanne. / አልተሳካም.")
+    await callback.message.answer(msg, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔄 Next Game / ቀጣይ ጨዋታ", callback_data="game_table")]
+    ]))
 
-def main():
-    threading.Thread(target=run_health_server, daemon=True).start()
-    
-    application = Application.builder().token(TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_click, pattern="^(deposit|withdraw|play_menu|check_balance|back_main|customer_service|game_.*|play_.*)$"))
-    application.add_handler(CallbackQueryHandler(admin_verification, pattern="^adm_"))
-    application.add_handler(MessageHandler(filters.PHOTO, handle_deposit_receipt))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_requests))
-    application.run_polling()
+@router.callback_query(F.data == "customer_service")
+async def customer_service(callback: CallbackQuery):
+    await callback.message.answer("📞 Gargaarsaaf: @admin_username")
 
-if __name__ == "__main__": 
-    main()
+@router.callback_query(F.data == "wd_phone")
+async def wd_start(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer("Lakk. bilbilaa kee galchi / ስልክ ቁጥርዎን ያስገቡ:")
+    await state.set_state(WithdrawalForm.phone)
+
+@router.message(WithdrawalForm.phone)
+async def wd_name(message: Message, state: FSMContext):
+    await state.update_data(phone=message.text)
+    await message.answer("Maqaa kee galchi / ስምዎን ያስገቡ:")
+    await state.set_state(WithdrawalForm.name)
+
+@router.message(WithdrawalForm.name)
+async def wd_amount(message: Message, state: FSMContext):
+    await state.update_data(name=message.text)
+    await message.answer("Gatii baasuu barbaaddu galchi / ማውጣት የሚፈልጉትን መጠን ያስገቡ:")
+    await state.set_state(WithdrawalForm.amount)
+
+@router.message(WithdrawalForm.amount)
+async def wd_finish(message: Message, state: FSMContext):
+    data = await state.update_data(amount=message.text)
+    await message.answer(f"✅ Odeeffannoon kee qabameera!\n\n📱 Bilbila: {data['phone']}\n👤 Maqaa: {data['name']}\n💰 Gatii: {data['amount']}")
+    await state.clear()
+
+async def main():
+    dp.include_router(router)
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
