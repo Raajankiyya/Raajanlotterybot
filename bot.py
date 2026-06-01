@@ -70,6 +70,42 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
+    asyncio.run(main())    amount = callback.data.split("_")[1]
+    
+    payment_info = (
+        "🟢 **DEPOSIT (Qarshii Galchuuf)** 🟢\n\n"
+        f"Gatii filatte: {amount} ETB\n\n"
+        "1. Lakkoofsa **Telebirr** keenya: `0924720606` irratti kaffalaa.\n"
+        "2. Fakkii (Screenshot) kaffaltii bot kanaaf ergaa."
+    )
+    
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Ergeera (Screenshot)", callback_data=f"confirm_{amount}")]
+    ])
+    
+    await callback.message.edit_text(payment_info, reply_markup=kb, parse_mode="Markdown")
+
+# 3. Admin-itti erguu (Screenshot_20260601_100400_Telegram X.jpg)
+@router.callback_query(F.data.startswith("confirm_"))
+async def notify_admin(callback: CallbackQuery):
+    amount = callback.data.split("_")[1]
+    user = callback.from_user
+    
+    admin_msg = (f"🔔 Deposit Haaraa!\n\n👤 User: {user.full_name}\n💰 Amount: {amount} ETB\n📅 Yeroo: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"✅ Mirkaneessi ({amount})", callback_data=f"done_{user.id}")],
+        [InlineKeyboardButton(text="❌ Diduuf", callback_data=f"reject_{user.id}")]
+    ])
+    
+    await bot.send_message(chat_id=ADMIN_ID, text=admin_msg, reply_markup=kb)
+    await callback.message.answer("🚀 Ragaan keessan Admin-itti ergameera!")
+
+async def main():
+    dp.include_router(router)
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
     asyncio.run(main())    payment_info = (
         "🟢 **DEPOSIT (Qarshii Galchuuf)** 🟢\n\n"
         f"Gatii filatte: {amount} ETB\n\n"
