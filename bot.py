@@ -1,13 +1,10 @@
 import asyncio
-import random
 from datetime import datetime
 from aiogram import Bot, Dispatcher, Router, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.filters import Command
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.fsm.context import FSMContext
 
-# 1. Token fi Admin ID kee asitti galchi
+# Token fi Admin ID kee asitti galchi
 API_TOKEN = "YOUR_BOT_TOKEN_HERE"
 ADMIN_ID = "YOUR_ADMIN_ID_HERE"
 
@@ -15,26 +12,65 @@ bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 router = Router()
 
-class WithdrawalForm(StatesGroup):
-    phone = State()
-    name = State()
-    amount = State()
-
-# --- Logic Tapha ---
-def calculate_game_result(stake):
-    lucky_numbers = [2, 5, 7]
-    user_choice = random.randint(1, 7)
-    if user_choice in lucky_numbers:
-        if stake == 5: prize = random.randint(5, 25)
-        elif stake == 15: prize = random.randint(15, 100)
-        elif stake == 25: prize = random.randint(25, 150)
-        else: prize = 0
-        return True, user_choice, prize
-    return False, user_choice, 0
-
-# --- Keyboards ---
-def get_main_kb():
+# 1. Deposit Panel (Table 5)
+def get_deposit_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="50", callback_data="dep_50"), InlineKeyboardButton(text="100", callback_data="dep_100")],
+        [InlineKeyboardButton(text="150", callback_data="dep_150"), InlineKeyboardButton(text="200", callback_data="dep_200")],
+        [InlineKeyboardButton(text="500", callback_data="dep_500")]
+    ])
+
+@router.message(Command("start"))
+async def start(message: Message):
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="📥 Deposit (Qarshii Galchuuf)", callback_data="deposit_menu")]])
+    await message.answer("Baga nagaan dhuftan! Maaloo filannoo filadhaa:", reply_markup=kb)
+
+@router.callback_query(F.data == "deposit_menu")
+async def deposit_menu(callback: CallbackQuery):
+    await callback.message.edit_text("🟢 **DEPOSIT (Qarshii Galchuuf)** 🟢\n\nGatii filadhaa:", reply_markup=get_deposit_kb(), parse_mode="Markdown")
+
+# 2. Qajeelfama Telebirr (Screenshot_20260601_102058_Telegram X.jpg)
+@router.callback_query(F.data.startswith("dep_"))
+async def show_payment_info(callback: CallbackQuery):
+    amount = callback.data.split("_")[1]
+    
+    payment_info = (
+        "🟢 **DEPOSIT (Qarshii Galchuuf)** 🟢\n\n"
+        f"Gatii filatte: {amount} ETB\n\n"
+        "1. Lakkoofsa **Telebirr** keenya: `0924720606` irratti kaffalaa.\n"
+        "2. Fakkii (Screenshot) kaffaltii bot kanaaf ergaa."
+    )
+    
+    # Mirkaneessuuf button
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Ergeera (Screenshot)", callback_data=f"confirm_{amount}")]
+    ])
+    
+    await callback.message.edit_text(payment_info, reply_markup=kb, parse_mode="Markdown")
+
+# 3. Admin-itti erguu (Screenshot_20260601_100400_Telegram X.jpg)
+@router.callback_query(F.data.startswith("confirm_"))
+async def notify_admin(callback: CallbackQuery):
+    amount = callback.data.split("_")[1]
+    user = callback.from_user
+    
+    admin_msg = (f"🔔 Deposit Haaraa!\n\n👤 User: {user.full_name}\n💰 Amount: {amount} ETB\n📅 Yeroo: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    
+    # Buttons mirkaneessaa kan fakkiin Screenshot_20260601_100400_Telegram X.jpg irratti jiru
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"✅ Mirkaneessi ({amount})", callback_data=f"done_{user.id}")],
+        [InlineKeyboardButton(text="❌ Diduuf", callback_data=f"reject_{user.id}")]
+    ])
+    
+    await bot.send_message(chat_id=ADMIN_ID, text=admin_msg, reply_markup=kb)
+    await callback.message.answer("🚀 Ragaan keessan Admin-itti ergameera!")
+
+async def main():
+    dp.include_router(router)
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())    return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📥 Deposit / ማስገቢያ", callback_data="deposit_menu")],
         [InlineKeyboardButton(text="📤 Withdrawal / ማውጫ", callback_data="wd_phone")],
         [InlineKeyboardButton(text="🎮 Game Table / የጨዋታ ጠረጴዛ", callback_data="game_table")],
