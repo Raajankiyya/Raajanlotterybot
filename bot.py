@@ -5,7 +5,7 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, C
 from aiogram.filters import Command
 
 # Token fi Admin ID kee asitti galchi
-API_TOKEN = "YOUR_BOT_TOKEN_HERE"
+API_TOKEN = "8200095818:AAHGl2VtiKQbt3dA6Vg5UOVB4H0g7QyVUOI"
 ADMIN_ID = "YOUR_ADMIN_ID_HERE"
 
 # Logging setup - rakkoo Render irratti argachuuf gargaara
