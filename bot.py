@@ -95,12 +95,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "🔴🔴🔴🔴🔴🔴🔴🔴\n"
         "⚪⚪⚪🌳⚪⚪⚪\n"
         "⚫⚫⚫⚫⚫⚫⚫⚫\n\n"
-        "**[Afaan Oromoo]**\n"
-        f"Baga Nagaan Dhuftan! Gara Bot tapha carraa keenyaatti.\n💰 **Balance keessan:** {balance} Birr\n\n"
-        "**[አማርኛ]**\n"
-        f"እንኳን በደህና መጡ! ወደ ጨዋታ ቦታችን።\n💰 **የአሁኑ ሂሳብዎ:** {balance} Birr"
+        "[Afaan Oromoo]\n"
+        f"Baga Nagaan Dhuftan! Gara Bot tapha carraa keenyaatti.\n💰 Balance keessan: {balance} Birr\n\n"
+        "[አማርኛ]\n"
+        f"እንኳን በደህና መጡ! ወደ ጨዋታ ቦታችን።\n💰 የአሁኑ ሂሳብዎ: {balance} Birr"
     )
-    await update.message.reply_text(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
+    await update.message.reply_text(welcome_text, reply_markup=get_main_keyboard())
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -110,37 +110,33 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     if query.data == "customer_service":
         await query.edit_message_text(
-            "🔵 **CUSTOMER SERVICE / የደንበኞች አገልግሎት** 🟢\n\n"
+            "🔵 CUSTOMER SERVICE / የደንበኞች አገልግሎት 🟢\n\n"
             "Afaan Oromoo: Rakkina ykn gaaffii qabdan gadi kanaan Admin keenya qunnamaa: @solee_Wes\n\n"
             "አማርኛ: ማንኛውም አይነት ችግር ወይም ጥያቄ ካለዎት ባለቤቱን ያግኙ: @solee_Wes",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Gara Main Menu", callback_data="back_main")]]),
-            parse_mode="Markdown"
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Gara Main Menu", callback_data="back_main")]])
         )
     elif query.data == "check_balance":
         await query.edit_message_text(
-            f"💳 **Herrega Kee / ሂሳብዎ:**\n\nHerrega keessan yeroo ammaa ` {balance} Birr ` dha.",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Gara Main Menu", callback_data="back_main")]]),
-            parse_mode="Markdown"
+            f"💳 Herrega Kee / ሂሳብዎ:\n\nHerrega keessan yeroo ammaa {balance} Birr dha.",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Gara Main Menu", callback_data="back_main")]])
         )
     elif query.data == "deposit":
         await query.edit_message_text(
-            f"🟢 **DEPOSIT (Qarshii Galchuuf) 🟢**\n\n"
-            f"1. Lakkoofsa **Telebirr** keenya: ` {TELEBIRR_NUMBER} ` irratti kaffalaa.\n"
+            f"🟢 DEPOSIT (Qarshii Galchuuf) 🟢\n\n"
+            f"1. Lakkoofsa Telebirr keenya: {TELEBIRR_NUMBER} irratti kaffalaa.\n"
             f"2. Fakkii (Screenshot) kaffaltii ergaa.\n"
-            f"💡 **Hubachiisa:** Screenshot yeroo ergitan gadi irratti hamma qarshii galchitan (Fkn: 150) jedhaatii barreessaa!",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Duubatti", callback_data="back_main")]]),
-            parse_mode="Markdown"
+            f"💡 Hubachiisa: Screenshot yeroo ergitan gadi irratti hamma qarshii galchitan (Fkn: 150) jedhaatii barreessaa!",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Duubatti", callback_data="back_main")]])
         )
     elif query.data == "withdraw":
         if balance < 100:
             await query.edit_message_text(
-                f"🔴 **WITHDRAW (Qarshii Baasuuf) 🟢**\n\n❌ Qarshii baasuuf xiqqaan **100 Birr** ta'uu qaba. Balance keessan ` {balance} Birr ` qofa.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Duubatti", callback_data="back_main")]]),
-                parse_mode="Markdown"
+                f"🔴 WITHDRAW (Qarshii Baasuuf) 🟢\n\n❌ Qarshii baasuuf xiqqaan 100 Birr ta'uu qaba. Balance keessan {balance} Birr qofa.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Duubatti", callback_data="back_main")]])
             )
         else:
             await query.edit_message_text(
-                f"🔴 **WITHDRAW (Qarshii Baasuuf) 🟢**\n\n⏩ Maqaa Bankii, Lakkoofsa Bankii fi Hamma qarshii baastan gadi kanaan bifa barreeffamaan nuuf barreessaa."
+                f"🔴 WITHDRAW (Qarshii Baasuuf) 🟢\n\n⏩ Maqaa Bankii, Lakkoofsa Bankii fi Hamma qarshii baastan gadi kanaan bifa barreeffamaan nuuf barreessaa."
             )
     elif query.data == "play_menu":
         keyboard = [
@@ -149,31 +145,25 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             [InlineKeyboardButton("🎲 Tapha 25 Birr (Argannoo: 25-150)", callback_data="game_25")],
             [InlineKeyboardButton("🔙 Gara Main Menu", callback_data="back_main")]
         ]
-        await query.edit_message_text("🎮 **Taphawwan Carraa Filadhu:**", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text("🎮 Taphawwan Carraa Filadhu:", reply_markup=InlineKeyboardMarkup(keyboard))
     
     elif query.data.startswith("game_"):
         cost = int(query.data.split("_")[1])
         if balance < cost:
             await query.edit_message_text(
-                f"❌ Tapha kanaaf {cost} Birr si barbaachisa. Balance kee ` {balance} Birr ` dha. Maaloo dura Deposit godhi.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🟢 Deposit", callback_data="deposit")]]),
-                parse_mode="Markdown"
+                f"❌ Tapha kanaaf {cost} Birr si barbaachisa. Balance kee {balance} Birr dha. Maaloo dura Deposit godhi.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🟢 Deposit", callback_data="deposit")]])
             )
             return
         
         table_text = (
-            f"🎮 **TOUCH & WIN (Abbaa {cost} Birr)**\n\n"
-            "📋 **GABATEE BADHAASAA / የሽልማት ሰንጠረዥ:**\n"
-            "```\n"
-            "| Gosa Taphaa | Lakkoofsa | Badhaasa Argamu  |\n"
-            "|-------------|-----------|------------------|\n"
-            "| Tapha 5     |   1 - 7   |   5 - 25 Birr    |\n"
-            "| Tapha 15    |   1 - 7   |  15 - 75 Birr    |\n"
-            "| Tapha 25    |   1 - 7   |  25 - 150 Birr   |\n"
-            "
-```\n"
-            "👉 Lakkoofsota **1 hanga 7** jiran keessaa lakkoofsa tokko tuquun badhaasa kee battalatti argadhu!\n\n"
-            "🟢 **Lakkoofsa kee filadhu:**"
+            f"🎮 TOUCH & WIN (Abbaa {cost} Birr)\n\n"
+            "📋 GABATEE BADHAASAA / የሽልማት ሰንጠረዥ:\n"
+            "Tapha 5   ->   5 - 25 Birr\n"
+            "Tapha 15  ->  15 - 75 Birr\n"
+            "Tapha 25  ->  25 - 150 Birr\n\n"
+            "👉 Lakkoofsota 1 hanga 7 jiran keessaa lakkoofsa tokko tuquun badhaasa kee battalatti argadhu!\n\n"
+            "🟢 Lakkoofsa kee filadhu:"
         )
         
         keyboard = []
@@ -185,7 +175,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 row = []
         keyboard.append([InlineKeyboardButton("🔙 Menu", callback_data="back_main")])
         
-        await query.edit_message_text(table_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(table_text, reply_markup=InlineKeyboardMarkup(keyboard))
         
     elif query.data.startswith("play_"):
         parts = query.data.split("_")
@@ -210,19 +200,19 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         new_bal = get_balance(user.id)
         
         final_text = (
-            f"🎮 **BU'AA TAPHA TOUCH & WIN** 🎮\n\n"
-            f"👉 Lakkoofsa Ati Tuqte: **🔢 {user_choice}**\n"
-            f"🎁 🎉 **BAGA GAMMADDE!** 🎉 🎁\n\n"
+            f"🎮 BU'AA TAPHA TOUCH & WIN 🎮\n\n"
+            f"👉 Lakkoofsa Ati Tuqte: 🔢 {user_choice}\n"
+            f"🎁 🎉 BAGA GAMMADDE! 🎉 🎁\n\n"
             f"Lakkoofsa ati tuqte irratti badhaasni argame:\n"
-            f"💰 **+{win_amount} Birr**\n\n"
-            f"💳 Herrega keessan yeroo ammaa: ` {new_bal} Birr `"
+            f"💰 +{win_amount} Birr\n\n"
+            f"💳 Herrega keessan yeroo ammaa: {new_bal} Birr"
         )
         
         keyboard = [
             [InlineKeyboardButton("🔄 Ammas Taphadhu", callback_data=f"game_{cost}")],
             [InlineKeyboardButton("🔙 Gara Main Menu", callback_data="back_main")]
         ]
-        await query.edit_message_text(final_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(final_text, reply_markup=InlineKeyboardMarkup(keyboard))
             
     elif query.data == "back_main":
         await query.edit_message_text(f"🔴⚪⚫ Balance keessan: {balance} Birr\nFilannoo keessan gadii kanaan qoradhaa:", reply_markup=get_main_keyboard())
@@ -246,7 +236,7 @@ async def handle_deposit_receipt(update: Update, context: ContextTypes.DEFAULT_T
     await context.bot.send_photo(
         chat_id=ADMIN_ID, 
         photo=photo_file, 
-        caption=f"📩 **Gaaffii Deposit Haaraa**\n👤 Maamila: {user.first_name} (@{user.username})\n📝 Barreeffama isaan dhiisan: {caption_text}\nID: {user.id}", 
+        caption=f"📩 Gaaffii Deposit Haaraa\n👤 Maamila: {user.first_name} (@{user.username})\n📝 Barreeffama isaan dhiisan: {caption_text}\nID: {user.id}", 
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
     await update.message.reply_text("🚀 Ragaan keessan Admin-itti ergameera! Admin hanga mirkaneessutti maaloo obsaan eegaa.")
@@ -287,21 +277,21 @@ async def admin_verification(update: Update, context: ContextTypes.DEFAULT_TYPE)
             
         update_balance(user_id, "", amount)
         new_bal = get_balance(user_id)
-        msg_to_user = f"✅ **Kaffaltiin keessan {amount} Birr mirkanaa'eera!**\nHerrega keessan irratti dabalameera.\n💰 Balance ammaa: {new_bal} Birr"
+        msg_to_user = f"✅ Kaffaltiin keessan {amount} Birr mirkanaa'eera!\nHerrega keessan irratti dabalameera.\n💰 Balance ammaa: {new_bal} Birr"
         msg_to_admin = f"🟢 User {user_id} kaffaltii {amount} Birr mirkaneessitee jirta."
         
         try:
-            await context.bot.send_message(chat_id=user_id, text=msg_to_user, reply_markup=get_main_keyboard(), parse_mode="Markdown")
+            await context.bot.send_message(chat_id=user_id, text=msg_to_user, reply_markup=get_main_keyboard())
         except Exception: pass
         
     elif req_type == "wit":
-        msg_to_user = "✅ **Gaaffiin qarshii baasuu keessan Admin biraa mirkanaa'eera!**\nQarshii keessan bankii keessan irratti kaffalameera."
+        msg_to_user = "✅ Gaaffiin qarshii baasuu keessan Admin biraa mirkanaa'eera!\nQarshii keessan bankii keessan irratti kaffalameera."
         msg_to_admin = f"🟢 User {user_id} Baasii isaa Mirkaneessitee jirta."
         try:
-            await context.bot.send_message(chat_id=user_id, text=msg_to_user, reply_markup=get_main_keyboard(), parse_mode="Markdown")
+            await context.bot.send_message(chat_id=user_id, text=msg_to_user, reply_markup=get_main_keyboard())
         except Exception: pass
     else:
-        msg_to_user = "❌ **Dhiifama, gaaffiin keessan fudhatama hin arganne.**\nRagaa kaffaltii keessan deebisaa mirkaneeffadha ykn Admin qunnamaa."
+        msg_to_user = "❌ Dhiifama, gaaffiin keessan fudhatama hin arganne.\nRagaa kaffaltii keessan deebisaa mirkaneeffadha ykn Admin qunnamaa."
         msg_to_admin = f"🔴 User {user_id} gaaffii isaa diddee jirta."
         try:
             await context.bot.send_message(chat_id=user_id, text=msg_to_user, reply_markup=get_main_keyboard())
