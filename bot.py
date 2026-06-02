@@ -6,13 +6,12 @@ import threading
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
-# Token, Admin ID fi Telebirr kee
-TOKEN = os.environ.get("TELEGRAM_TOKEN", "8200095818:AAHGl2VtiKQbt3dA6Vg5UOVB4H0g7QyVUOI")
+# TOKEN FI DATABASE URL - RENDER ENV IRRAA KALLATTIIDHAAN FUDHATA
+TOKEN = os.environ.get("BOT_TOKEN", "8200095818:AAHGl2VtiKQbt3dA6Vg5UOVB4H0g7QyVUOI")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://neondb_owner:npg_3QVYKmcTG9Rn@ep-divine-morning-ap5ugbss-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
+
 ADMIN_ID = 6271558160
 TELEBIRR_NUMBER = "0924720606"
-
-# DATABASE NEON
-DATABASE_URL = "postgresql://neondb_owner:npg_3QVYKmcTG9Rn@ep-divine-morning-ap5ugbss-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 # ---- SERVER FOR RENDER ----
 class HealthCheckHandler(BaseHTTPRequestHandler):
@@ -46,31 +45,40 @@ def init_db():
     conn.close()
 
 def get_balance(user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
-    row = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    if row:
-        return round(float(row[0]), 2)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if row:
+            return round(float(row[0]), 2)
+    except Exception:
+        pass
     return 0.0
 
 def update_balance(user_id, username, amount):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO users (user_id, username, balance) 
-        VALUES (%s, %s, 0.0)
-        ON CONFLICT (user_id) DO UPDATE SET username = EXCLUDED.username
-    """, (user_id, username))
-    
-    cursor.execute("UPDATE users SET balance = balance + %s WHERE user_id = %s", (amount, user_id))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO users (user_id, username, balance) 
+            VALUES (%s, %s, 0.0)
+            ON CONFLICT (user_id) DO UPDATE SET username = EXCLUDED.username
+        """, (user_id, username))
+        
+        cursor.execute("UPDATE users SET balance = balance + %s WHERE user_id = %s", (amount, user_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception:
+        pass
 
-init_db()
+try:
+    init_db()
+except Exception as e:
+    print(f"Database error during init: {e}")
 
 # ---- BUTTON MAIN MENU ----
 def get_main_keyboard():
@@ -86,7 +94,7 @@ def get_main_keyboard():
         ]
     ])
 
-# ---- BOT ACTIONS (START HERE) ----
+# ---- BOT ACTIONS ----
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.message.from_user
     balance = get_balance(user.id)
@@ -96,14 +104,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "⚪⚪⚪🌳⚪⚪⚪\n"
         "⚫⚫⚫⚫⚫⚫⚫⚫\n\n"
         "[Afaan Oromoo]\n"
-        f"Baga Nagaan Dhuftan! Gara Bot tapha carraa keenyaatti.\n"
-        f"💰 Balance keessan: {balance} Birr\n\n"
+        f"Baga Nagaan Dhuftan! Gara Bot tapha carraa keenyaatti.\n💰 Balance keessan: {balance} Birr\n\n"
         "[አማርኛ]\n"
-        f"እንኳን በደህና መጡ! ወደ ጨዋታ ቦታችን።\n"
-        f"💰 የአሁኑ ሂሳብዎ: {balance} Birr"
+        f"እንኳን በደህና መጡ! ወደ ጨዋታ ቦታችን።\n💰 የአሁኑ ሂሳብዎ: {balance} Birr"
     )
-    # Parse mode Markdown irraa hanbifneera akka Error hin uumneef
-    await update.message.reply_text(text=welcome_text, reply_markup=get_main_keyboard())
+    await update.message.reply_text(welcome_text, reply_markup=get_main_keyboard())
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -220,7 +225,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     elif query.data == "back_main":
         await query.edit_message_text(f"🔴⚪⚫ Balance keessan: {balance} Birr\nFilannoo keessan gadii kanaan qoradhaa:", reply_markup=get_main_keyboard())
 
-# ---- HANDLE DEPOSIT RECEIPT FROM USER ----
 async def handle_deposit_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.message.from_user
     photo_file = update.message.photo[-1].file_id
@@ -236,13 +240,16 @@ async def handle_deposit_receipt(update: Update, context: ContextTypes.DEFAULT_T
         [InlineKeyboardButton("❌ Diduuf (Reject)", callback_data=f"adm_rej_0_{user.id}")]
     ]
     
-    await context.bot.send_photo(
-        chat_id=ADMIN_ID, 
-        photo=photo_file, 
-        caption=f"📩 Gaaffii Deposit Haaraa\n👤 Maamila: {user.first_name} (@{user.username})\n📝 Barreeffama isaan dhiisan: {caption_text}\nID: {user.id}", 
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-    await update.message.reply_text("🚀 Ragaan keessan Admin-itti ergameera! Admin hanga mirkaneessutti maaloo obsaan eegaa.")
+    try:
+        await context.bot.send_photo(
+            chat_id=ADMIN_ID, 
+            photo=photo_file, 
+            caption=f"📩 Gaaffii Deposit Haaraa\n👤 Maamila: {user.first_name} (@{user.username})\n📝 Barreeffama isaan dhiisan: {caption_text}\nID: {user.id}", 
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        await update.message.reply_text("🚀 Ragaan keessan Admin-itti ergameera! Admin hanga mirkaneessutti maaloo obsaan eegaa.")
+    except Exception:
+        pass
 
 async def handle_text_requests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.message.from_user
@@ -253,10 +260,12 @@ async def handle_text_requests(update: Update, context: ContextTypes.DEFAULT_TYP
         [InlineKeyboardButton("✅ Baasii Mirkaneessi", callback_data=f"adm_wit_0_{user.id}")], 
         [InlineKeyboardButton("❌ Baasii Didu", callback_data=f"adm_rej_0_{user.id}")]
     ]
-    await context.bot.send_message(chat_id=ADMIN_ID, text=f"📩 Withdraw Gaaffii:\n👤 Maamila: {user.first_name} (@{user.username})\n📝 Odeeffannoo Bankii: {text}\nID: {user.id}", reply_markup=InlineKeyboardMarkup(keyboard))
-    await update.message.reply_text("🚀 Gaaffiin keessan Admin-itti ergameera. Admin keessan kaffalee yeroo xumuru ergaan siif dhufa.")
+    try:
+        await context.bot.send_message(chat_id=ADMIN_ID, text=f"📩 Withdraw Gaaffii:\n👤 Maamila: {user.first_name} (@{user.username})\n📝 Odeeffannoo Bankii: {text}\nID: {user.id}", reply_markup=InlineKeyboardMarkup(keyboard))
+        await update.message.reply_text("🚀 Gaaffiin keessan Admin-itti ergameera. Admin keessan kaffalee yeroo xumuru ergaan siif dhufa.")
+    except Exception:
+        pass
 
-# ---- ADMIN VERIFICATION PROCESS ----
 async def admin_verification(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
@@ -282,7 +291,6 @@ async def admin_verification(update: Update, context: ContextTypes.DEFAULT_TYPE)
         new_bal = get_balance(user_id)
         msg_to_user = f"✅ Kaffaltiin keessan {amount} Birr mirkanaa'eera!\nHerrega keessan irratti dabalameera.\n💰 Balance ammaa: {new_bal} Birr"
         msg_to_admin = f"🟢 User {user_id} kaffaltii {amount} Birr mirkaneessitee jirta."
-        
         try:
             await context.bot.send_message(chat_id=user_id, text=msg_to_user, reply_markup=get_main_keyboard())
         except Exception: pass
