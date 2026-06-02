@@ -27,7 +27,7 @@ def run_health_server():
     server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
     server.serve_forever()
 
-# ---- DATABASE QUQQUNNAMTII (RECHECKED & FIXED) ----
+# ---- DATABASE QUQQUNNAMTII ----
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL)
 
@@ -59,20 +59,17 @@ def get_balance(user_id):
 def update_balance(user_id, username, amount):
     conn = get_db_connection()
     cursor = conn.cursor()
-    # User yoo hin jirre jalqaba uumuu
     cursor.execute("""
         INSERT INTO users (user_id, username, balance) 
         VALUES (%s, %s, 0.0)
         ON CONFLICT (user_id) DO UPDATE SET username = EXCLUDED.username
     """, (user_id, username))
     
-    # Hamma qarshii itti dabaluu/hir'isuu
     cursor.execute("UPDATE users SET balance = balance + %s WHERE user_id = %s", (amount, user_id))
     conn.commit()
     cursor.close()
     conn.close()
 
-# Database start gochuu
 init_db()
 
 # ---- BUTTON MAIN MENU ----
@@ -164,7 +161,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             )
             return
         
-        # Gabatee bifa table tiin qophaaye
         table_text = (
             f"🎮 **TOUCH & WIN (Abbaa {cost} Birr)**\n\n"
             "📋 **GABATEE BADHAASAA / የሽልማት ሰንጠረዥ:**\n"
@@ -196,16 +192,13 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         cost = int(parts[1])
         user_choice = int(parts[2])
         
-        # Balance ammas mirkaneeffachuu (double check)
         current_bal = get_balance(user.id)
         if current_bal < cost:
             await query.edit_message_text("❌ Herregni kee gahaa miti. Maaloo kaffaltii gadii kanaan galchi.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🟢 Deposit", callback_data="deposit")]]))
             return
             
-        # Tikkeettii kaffalchiisuu
         update_balance(user.id, user.username, -cost)
         
-        # Lakkoofsa inni tuqe irratti badhaasni battalatti ni shallagama (Randomly)
         if cost == 5:
             win_amount = random.randint(5, 25)
         elif cost == 15:
@@ -213,7 +206,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         else:
             win_amount = random.randint(25, 150)
             
-        # Badhaasa herregatti dabaluu
         update_balance(user.id, user.username, win_amount)
         new_bal = get_balance(user.id)
         
@@ -271,7 +263,7 @@ async def handle_text_requests(update: Update, context: ContextTypes.DEFAULT_TYP
     await context.bot.send_message(chat_id=ADMIN_ID, text=f"📩 Withdraw Gaaffii:\n👤 Maamila: {user.first_name} (@{user.username})\n📝 Odeeffannoo Bankii: {text}\nID: {user.id}", reply_markup=InlineKeyboardMarkup(keyboard))
     await update.message.reply_text("🚀 Gaaffiin keessan Admin-itti ergameera. Admin keessan kaffalee yeroo xumuru ergaan siif dhufa.")
 
-# ---- ADMIN VERIFICATION PROCESS (FIXED LOGIC) ----
+# ---- ADMIN VERIFICATION PROCESS ----
 async def admin_verification(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
@@ -279,9 +271,9 @@ async def admin_verification(update: Update, context: ContextTypes.DEFAULT_TYPE)
     parts = query.data.split("_")
     if len(parts) < 4 or parts[0] != "adm": return
     
-    req_type = parts[1]      # dep, wit, rej
-    amount_str = parts[2]    # hamma qarshii
-    user_id = int(parts[3])  # maamila ID
+    req_type = parts[1]      
+    amount_str = parts[2]    
+    user_id = int(parts[3])  
     
     try:
         amount = float(amount_str)
@@ -290,7 +282,7 @@ async def admin_verification(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     if req_type == "dep":
         if amount <= 0:
-            await query.edit_message_text(text="❌ Dogoggora: Qarshii 0 galchuu hin dandeessu. Maaloo button hamma qarshii qabu tuqi.")
+            await query.edit_message_text(text="❌ Dogoggora: Qarshii 0 galchuu hin dandeessu.")
             return
             
         update_balance(user_id, "", amount)
@@ -318,7 +310,6 @@ async def admin_verification(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await query.edit_message_text(text=msg_to_admin)
 
 def main():
-    # Server Render amansiisaa gochuu
     threading.Thread(target=run_health_server, daemon=True).start()
     
     application = Application.builder().token(TOKEN).build()
