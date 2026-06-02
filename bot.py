@@ -7,7 +7,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
 # Token, Admin ID fi Telebirr kee
-TOKEN = "8200095818:AAHGl2VtiKQbt3dA6Vg5UOVB4H0g7QyVUOI"
+TOKEN = os.environ.get("TELEGRAM_TOKEN", "8200095818:AAHGl2VtiKQbt3dA6Vg5UOVB4H0g7QyVUOI")
 ADMIN_ID = 6271558160
 TELEBIRR_NUMBER = "0924720606"
 
@@ -86,7 +86,7 @@ def get_main_keyboard():
         ]
     ])
 
-# ---- BOT ACTIONS ----
+# ---- BOT ACTIONS (START HERE) ----
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.message.from_user
     balance = get_balance(user.id)
@@ -96,11 +96,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "⚪⚪⚪🌳⚪⚪⚪\n"
         "⚫⚫⚫⚫⚫⚫⚫⚫\n\n"
         "[Afaan Oromoo]\n"
-        f"Baga Nagaan Dhuftan! Gara Bot tapha carraa keenyaatti.\n💰 Balance keessan: {balance} Birr\n\n"
+        f"Baga Nagaan Dhuftan! Gara Bot tapha carraa keenyaatti.\n"
+        f"💰 Balance keessan: {balance} Birr\n\n"
         "[አማርኛ]\n"
-        f"እንኳን በደህና መጡ! ወደ ጨዋታ ቦታችን።\n💰 የአሁኑ ሂሳብዎ: {balance} Birr"
+        f"እንኳን በደህና መጡ! ወደ ጨዋታ ቦታችን።\n"
+        f"💰 የአሁኑ ሂሳብዎ: {balance} Birr"
     )
-    await update.message.reply_text(welcome_text, reply_markup=get_main_keyboard())
+    # Parse mode Markdown irraa hanbifneera akka Error hin uumneef
+    await update.message.reply_text(text=welcome_text, reply_markup=get_main_keyboard())
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
