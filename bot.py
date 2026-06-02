@@ -1,6 +1,6 @@
 import os
 import random
-import psycopg2
+import psycopg
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -29,7 +29,7 @@ def run_health_server():
 
 # ---- DATABASE QUQQUNNAMTII ----
 def get_db_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return psycopg.connect(DATABASE_URL)
 
 def init_db():
     conn = get_db_connection()
